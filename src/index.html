@@ -1,0 +1,1209 @@
+<!-- <!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Hello World!</title>
+
+  </head>
+  <body>
+    <h1>💖 Hello World!</h1>
+    <p>Welcome to your Electron application.</p>
+  </body>
+</html> -->
+<!DOCTYPE html>
+<html>
+<body>
+  <div>
+    <textarea id="info" style="width: 500px; height: 100px;"></textarea>
+    <input type="checkbox" id="sitenumber" checked />位号
+    <input type="checkbox" id="temperature" checked />温度
+    <input type="checkbox" id="selectall" />整板温度
+    <!-- <input type="checkbox" id="before3" checked />所有前3
+    <input type="checkbox" id="behind3" checked />所有后3 -->
+    <input type="checkbox" id="pe_before3" checked />PE前3
+    <input type="checkbox" id="pe_behind3" checked />PE后3
+    <input type="checkbox" id="dps_before3" checked />DPS前3
+    <input type="checkbox" id="dps_behind3" checked />DPS后3
+    <input type="checkbox" id="pmu_before3" checked />PMU前3
+    <input type="checkbox" id="pmu_behind3" checked />PMU后3
+    <button onclick="search()">查询</button>
+  </div>
+<canvas id="myCanvas" width="2180" height="838"
+style="border:1px solid #f44336;">
+</canvas>
+
+<script>
+
+var img = new Image();
+img.src = '../main_window/assets/img/board.png';
+img.onload = function() {
+    // draw(this);
+    search()
+};
+const data=[]
+var data_PE_M=[]
+var data_PE_D=[]
+var data_DPS_M=[]
+var data_DPS_D=[]
+var data_PMU_M=[]
+var data_PMU_D=[]
+function search(){
+  var str=document.getElementById("info").value;
+  
+  var dd=str.split('\n\n');
+  data.splice(0);
+  dd.map((d)=>{
+    if(d.indexOf("CPU") != -1){
+      var arr=d.split('\n')
+      data.push([arr.pop(),180,530,"CPU"])
+    }
+    else if(d.indexOf("LM75-DPS-BOARD") != -1){
+      var arr=d.split('\n')
+      data.push([arr.pop(),417,190,"DPS"])
+    }
+    else if(d.indexOf("LM75-TG0-BOARD") != -1){
+      var arr=d.split('\n')
+      data.push([arr.pop(),80,400,"LM75-0"])
+    }
+    else if(d.indexOf("LM75-TG3-BOARD") != -1){
+      var arr=d.split('\n')
+      data.push([arr.pop(),756,378,"LM75-1"])
+    }
+    else if(d.indexOf("LM75-DAU-DPS-BOARD") != -1){
+      var arr=d.split('\n')
+      data.push([arr.pop(),1704,181,"DPS"])
+    }
+    else if(d.indexOf("LM75-DAU-TG0-BOARD") != -1){
+      var arr=d.split('\n')
+      data.push([arr.pop(),1367,366,"LM75-0"])
+    }
+    else if(d.indexOf("LM75-DAU-TG3-BOARD") != -1){
+      var arr=d.split('\n')
+      data.push([arr.pop(),2056,400,"LM75-1"])
+    }
+    else if(d.indexOf("PG:") != -1){
+      var arr=d.split('\n')
+      var dd=arr.pop()
+      if(dd.substr(0,1)=="["){
+        var ddd=dd.split('  ')
+        for (var i = 1; i <= ddd.length; i++) {
+          //PG只有一行
+          if(i==1){
+            data.push([ddd[i],415,437,"PG"])
+          }
+          else if(i==2){
+            data.push([ddd[i],1706,436,"PG"])
+          }
+        }
+      }else{
+        data.push([arr[0],415,437])
+      }
+    }
+    else if(d.indexOf("TG:") != -1){
+      var arr=d.split('\n')
+      arr.shift(); //删除第一行
+      arr.forEach(e => {
+        var ddd=e.split('  ')
+        if(e.substr(1,2)=="00"){
+          //添加0-5或者0-3
+          for (var i = 1; i <= e.length; i++) {
+            if(i==1){
+              data.push([ddd[i],125,300,"TG0"])
+            }
+            else if(i==2){
+              data.push([ddd[i],230,300,"TG1"])
+            }
+            else if(i==3){
+              data.push([ddd[i],610,300,"TG2"])
+            }
+            else if(i==4){
+              data.push([ddd[i],715,300,"TG3"])
+            }
+            else if(i==5){
+              data.push([ddd[i],1410,300,"TG0"])
+            }
+            else if(i==6){
+              data.push([ddd[i],1514,300,"TG1"])
+            }
+          }
+        }
+        else if(e.substr(1,2)=="06"){
+          for (var i = 1; i < ddd.length; i++) {
+            if(i==1){
+              data.push([ddd[i],1900,300,"TG2"])
+            }
+            else if(i==2){
+              data.push([ddd[i],2000,300,"TG3"])
+            }
+          }
+        }
+      });
+    }
+    else if(d.indexOf("PE:") != -1){
+      //将此数组再单独分开PE、DPS、PMU
+      var type=""
+      var abc=d.split('\n')
+      abc.forEach((item,index,arr) => {
+        if(item.substr(0,2)=="PE"){
+          type="PE"
+        }
+        else if(item.substr(0,3)=="DPS"){
+          type="DPS"
+        }
+        else if(item.substr(0,3)=="PMU"){
+          type="PMU"
+        }
+        else if(item.substr(0,1)!="["){
+          
+        }
+        else{
+          if(type=="PE"){
+            var ddd=item.split('  ')
+            if(item.substr(1,3)=="000"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],92,245,"00","PE_M"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],92,215,"01","PE_M"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],92,186,"02","PE_M"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],92,150,"03","PE_M"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],92,120,"04","PE_M"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],92,88,"05","PE_M"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="011"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],122,245,"11","PE_M"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],122,215,"10","PE_M"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],122,186,"09","PE_M"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],122,150,"08","PE_M"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],122,120,"07","PE_M"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],122,88,"06","PE_M"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="012"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],155,245,"12","PE_M"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],155,215,"13","PE_M"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],155,186,"14","PE_M"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],155,150,"15","PE_M"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],155,120,"16","PE_M"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],155,88,"17","PE_M"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="018"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],195,245,"18","PE_M"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],195,215,"19","PE_M"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],195,186,"20","PE_M"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],195,150,"21","PE_M"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],195,120,"22","PE_M"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],195,88,"23","PE_M"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="029"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],228,245,"29","PE_M"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],228,215,"28","PE_M"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],228,186,"27","PE_M"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],228,150,"26","PE_M"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],228,120,"25","PE_M"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],228,88,"24","PE_M"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="030"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],258,245,"30","PE_M"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],258,215,"31","PE_M"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],258,186,"32","PE_M"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],258,150,"33","PE_M"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],258,120,"34","PE_M"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],258,88,"35","PE_M"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="036"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],580,245,"36","PE_M"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],580,215,"37","PE_M"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],580,186,"38","PE_M"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],580,150,"39","PE_M"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],580,120,"40","PE_M"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],580,88,"41","PE_M"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="047"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],610,245,"47","PE_M"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],610,215,"46","PE_M"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],610,186,"45","PE_M"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],610,150,"44","PE_M"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],610,120,"43","PE_M"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],610,88,"42","PE_M"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="048"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],640,245,"48","PE_M"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],640,215,"49","PE_M"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],640,186,"50","PE_M"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],640,150,"51","PE_M"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],640,120,"52","PE_M"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],640,88,"53","PE_M"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="054"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],680,245,"54","PE_M"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],680,215,"55","PE_M"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],680,186,"56","PE_M"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],680,150,"57","PE_M"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],680,120,"58","PE_M"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],680,88,"59","PE_M"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="065"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],713,245,"65","PE_M"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],713,215,"64","PE_M"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],713,186,"63","PE_M"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],713,150,"62","PE_M"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],713,120,"61","PE_M"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],713,88,"60","PE_M"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="066"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],745,245,"66","PE_M"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],745,215,"67","PE_M"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],745,186,"68","PE_M"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],745,150,"69","PE_M"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],745,120,"70","PE_M"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],745,88,"71","PE_M"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="072"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],1377,244,"72","PE_D"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],1377,212,"73","PE_D"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],1377,180,"74","PE_D"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],1377,148,"75","PE_D"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],1377,115,"76","PE_D"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],1377,82,"77","PE_D"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="083"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],1407,244,"83","PE_D"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],1407,212,"82","PE_D"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],1407,180,"81","PE_D"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],1407,148,"80","PE_D"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],1407,115,"79","PE_D"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],1407,82,"78","PE_D"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="084"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],1440,244,"84","PE_D"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],1440,212,"85","PE_D"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],1440,180,"86","PE_D"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],1440,148,"87","PE_D"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],1440,115,"88","PE_D"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],1440,82,"89","PE_D"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="090"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],1482,244,"90","PE_D"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],1482,212,"91","PE_D"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],1482,180,"92","PE_D"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],1482,148,"93","PE_D"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],1482,115,"94","PE_D"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],1482,82,"95","PE_D"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="101"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],1513,244,"101","PE_D"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],1513,212,"100","PE_D"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],1513,180,"99","PE_D"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],1513,148,"98","PE_D"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],1513,115,"97","PE_D"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],1513,82,"96","PE_D"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="102"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],1545,244,"102","PE_D"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],1545,212,"103","PE_D"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],1545,180,"104","PE_D"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],1545,148,"105","PE_D"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],1545,115,"106","PE_D"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],1545,82,"107","PE_D"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="108"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],1864,244,"108","PE_D"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],1864,212,"109","PE_D"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],1864,180,"110","PE_D"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],1864,148,"111","PE_D"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],1864,115,"112","PE_D"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],1864,82,"113","PE_D"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="119"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],1895,244,"119","PE_D"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],1895,212,"118","PE_D"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],1895,180,"117","PE_D"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],1895,148,"116","PE_D"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],1895,115,"115","PE_D"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],1895,82,"114","PE_D"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="120"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],1927,244,"120","PE_D"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],1927,212,"121","PE_D"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],1927,180,"122","PE_D"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],1927,148,"123","PE_D"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],1927,115,"124","PE_D"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],1927,82,"125","PE_D"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="126"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],1968,244,"126","PE_D"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],1968,212,"127","PE_D"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],1968,180,"128","PE_D"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],1968,148,"129","PE_D"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],1968,115,"130","PE_D"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],1968,82,"131","PE_D"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="137"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],2000,244,"137","PE_D"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],2000,212,"136","PE_D"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],2000,180,"135","PE_D"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],2000,148,"134","PE_D"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],2000,115,"133","PE_D"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],2000,82,"132","PE_D"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="138"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],2032,244,"138","PE_D"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],2032,212,"139","PE_D"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],2032,180,"140","PE_D"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],2032,148,"141","PE_D"])
+                }
+                else if(i==5){
+                  data.push([ddd[i],2032,115,"142","PE_D"])
+                }
+                else if(i==6){
+                  data.push([ddd[i],2032,82,"143","PE_D"])
+                }
+              }
+            }
+          }
+          else if(type=="DPS"){
+            var ddd=item.split('  ')
+            if(item.substr(1,3)=="000"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],310,316,"00","DPS_M"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],310,274,"01","DPS_M"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],310,236,"02","DPS_M"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],310,200,"03","DPS_M"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="007"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],351,316,"07","DPS_M"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],351,274,"06","DPS_M"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],351,236,"05","DPS_M"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],351,200,"04","DPS_M"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="008"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],391,316,"08","DPS_M"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],391,274,"09","DPS_M"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],391,236,"10","DPS_M"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],391,200,"11","DPS_M"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="012"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],449,316,"12","DPS_M"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],449,274,"13","DPS_M"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],449,236,"14","DPS_M"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],449,200,"15","DPS_M"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="019"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],490,316,"19","DPS_M"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],490,274,"18","DPS_M"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],490,236,"17","DPS_M"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],490,200,"16","DPS_M"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="020"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],529,316,"20","DPS_M"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],529,274,"21","DPS_M"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],529,236,"22","DPS_M"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],529,200,"23","DPS_M"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="024"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],1598,313,"24","DPS_D"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],1598,272,"25","DPS_D"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],1598,234,"26","DPS_D"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],1598,196,"27","DPS_D"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="031"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],1637,313,"31","DPS_D"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],1637,272,"30","DPS_D"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],1637,234,"29","DPS_D"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],1637,196,"28","DPS_D"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="032"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],1677,313,"32","DPS_D"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],1677,272,"33","DPS_D"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],1677,234,"34","DPS_D"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],1677,196,"35","DPS_D"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="036"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],1736,313,"36","DPS_D"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],1736,272,"37","DPS_D"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],1736,234,"38","DPS_D"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],1736,196,"39","DPS_D"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="043"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],1776,313,"43","DPS_D"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],1776,272,"42","DPS_D"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],1776,234,"41","DPS_D"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],1776,196,"40","DPS_D"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="044"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],1816,313,"44","DPS_D"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],1816,272,"45","DPS_D"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],1816,234,"46","DPS_D"])
+                }
+                else if(i==4){
+                  data.push([ddd[i],1816,196,"47","DPS_D"])
+                }
+              }
+            }
+          }
+          else if(type=="PMU"){
+            var ddd=item.split('  ')
+            if(item.substr(1,3)=="000"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],305,160,"00","PMU_M"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],305,123,"01","PMU_M"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],350,160,"02","PMU_M"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="003"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],485,160,"03","PMU_M"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],526,123,"04","PMU_M"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],526,160,"05","PMU_M"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="006"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],1594,157,"06","PMU_D"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],1594,118,"07","PMU_D"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],1632,157,"08","PMU_D"])
+                }
+              }
+            }
+            else if(item.substr(1,3)=="009"){
+              for (var i = 1; i < ddd.length; i++) {
+                if(i==1){
+                  data.push([ddd[i],1772,157,"09","PMU_D"])
+                }
+                else if(i==2){
+                  data.push([ddd[i],1812,118,"10","PMU_D"])
+                }
+                else if(i==3){
+                  data.push([ddd[i],1812,157,"11","PMU_D"])
+                }
+              }
+            }
+          }
+        }
+    }); 
+   
+    }
+  })
+
+  data_PE_M = data.filter(el => {
+    return el[4]=="PE_M"
+  })
+  data_PE_D = data.filter(el => {
+    return el[4]=="PE_D"
+  })
+  data_DPS_M = data.filter(el => {
+    return el[4]=="DPS_M"
+  })
+  data_DPS_D = data.filter(el => {
+    return el[4]=="DPS_D"
+  })
+  data_PMU_M = data.filter(el => {
+    return el[4]=="PMU_M"
+  })
+  data_PMU_D = data.filter(el => {
+    return el[4]=="PMU_D"
+  })
+
+  var stywh=document.getElementById("sitenumber").checked;
+  var stywd=document.getElementById("temperature").checked;
+  var selectall=document.getElementById("selectall").checked;
+  var selectall=document.getElementById("selectall").checked;
+  var pe_before3=document.getElementById("pe_before3").checked;
+  var pe_behind3=document.getElementById("pe_behind3").checked;
+  var dps_before3=document.getElementById("dps_before3").checked;
+  var dps_behind3=document.getElementById("dps_behind3").checked;
+  var pmu_before3=document.getElementById("pmu_before3").checked;
+  var pmu_behind3=document.getElementById("pmu_behind3").checked;
+  if(selectall){
+    draw(data,img,stywh,stywd);
+  }else {
+    var show_PE_M=[]
+    var show_PE_D=[]
+    var show_DPS_M=[]
+    var show_DPS_D=[]
+    var show_PMU_M=[]
+    var show_PMU_D=[]
+    if(pe_before3 || pe_behind3){
+      var filter_PE_M=[]
+      data_PE_M.map(p=>{
+        if(filter_PE_M.indexOf(Number(p[0]))==-1){
+          filter_PE_M.push(Number(p[0]))
+        }
+      })
+      var f_PE_M=[]
+      if(pe_before3 && pe_behind3){
+        var a=filter_PE_M.sort().slice(0,3)
+        var b=filter_PE_M.sort((a, b) => b - a).slice(0,3)
+        f_PE_M=[...a, ...b]
+      }
+      else if(pe_before3){
+        f_PE_M=filter_PE_M.sort().slice(0,3)
+      }
+      else if(pe_behind3){
+        f_PE_M=filter_PE_M.sort((a, b) => b - a).slice(0,3)
+      }
+      var show_PE_M=data_PE_M.filter(el => {
+        return f_PE_M.indexOf(Number(el[0]))!=-1
+      })
+      var filter_PE_D=[]
+      data_PE_D.map(p=>{
+        if(filter_PE_D.indexOf(Number(p[0]))==-1){
+          filter_PE_D.push(Number(p[0]))
+        }
+      })
+      var f_PE_D=[]
+      if(pe_before3 && pe_behind3){
+        var a=filter_PE_D.sort().slice(0,3)
+        var b=filter_PE_D.sort((a, b) => b - a).slice(0,3)
+        f_PE_D=[...a, ...b]
+      }
+      else if(pe_before3){
+        f_PE_D=filter_PE_D.sort().slice(0,3)
+      }
+      else if(pe_behind3){
+        f_PE_D=filter_PE_D.sort((a, b) => b - a).slice(0,3)
+      }
+      var show_PE_D=data_PE_D.filter(el => {
+        return f_PE_D.indexOf(Number(el[0]))!=-1
+      })
+    }
+    if(dps_before3 || dps_behind3){
+      var filter_DPS_M=[]
+      data_DPS_M.map(p=>{
+        if(filter_DPS_M.indexOf(Number(p[0]))==-1){
+          filter_DPS_M.push(Number(p[0]))
+        }
+      })
+      var f_DPS_M=[]
+      if(dps_before3 && dps_behind3){
+        var a=filter_DPS_M.sort().slice(0,3)
+        var b=filter_DPS_M.sort((a, b) => b - a).slice(0,3)
+        f_DPS_M=[...a, ...b]
+      }
+      else if(dps_before3){
+        f_DPS_M=filter_DPS_M.sort().slice(0,3)
+      }
+      else if(dps_behind3){
+        f_DPS_M=filter_DPS_M.sort((a, b) => b - a).slice(0,3)
+      }
+      var show_DPS_M=data_DPS_M.filter(el => {
+        return f_DPS_M.indexOf(Number(el[0]))!=-1
+      })
+      var filter_DPS_D=[]
+      data_DPS_D.map(p=>{
+        if(filter_DPS_D.indexOf(Number(p[0]))==-1){
+          filter_DPS_D.push(Number(p[0]))
+        }
+      })
+      var f_DPS_D=[]
+      if(dps_before3 && dps_behind3){
+        var a=filter_DPS_D.sort().slice(0,3)
+        var b=filter_DPS_D.sort((a, b) => b - a).slice(0,3)
+        f_DPS_D=[...a, ...b]
+      }
+      else if(dps_before3){
+        f_DPS_D=filter_DPS_D.sort().slice(0,3)
+      }
+      else if(dps_behind3){
+        f_DPS_D=filter_DPS_D.sort((a, b) => b - a).slice(0,3)
+      }
+      var show_DPS_D=data_DPS_D.filter(el => {
+        return f_DPS_D.indexOf(Number(el[0]))!=-1
+      })
+    }
+    if(pmu_before3 || pmu_behind3){
+      var filter_PMU_M=[]
+      data_PMU_M.map(p=>{
+        if(filter_PMU_M.indexOf(Number(p[0]))==-1){
+          filter_PMU_M.push(Number(p[0]))
+        }
+      })
+      var f_PMU_M=[]
+      if(pmu_before3 && pmu_behind3){
+        var a=filter_PMU_M.sort().slice(0,3)
+        var b=filter_PMU_M.sort((a, b) => b - a).slice(0,3)
+        f_PMU_M=[...a, ...b]
+      }
+      else if(pmu_before3){
+        f_PMU_M=filter_PMU_M.sort().slice(0,3)
+      }
+      else if(pmu_behind3){
+        f_PMU_M=filter_PMU_M.sort((a, b) => b - a).slice(0,3)
+      }
+      var show_PMU_M=data_PMU_M.filter(el => {
+        return f_PMU_M.indexOf(Number(el[0]))!=-1
+      })
+      var filter_PMU_D=[]
+      data_PMU_D.map(p=>{
+        if(filter_PMU_D.indexOf(Number(p[0]))==-1){
+          filter_PMU_D.push(Number(p[0]))
+        }
+      })
+      var f_PMU_D=[]
+      if(pmu_before3 && pmu_behind3){
+        var a=filter_PMU_D.sort().slice(0,3)
+        var b=filter_PMU_D.sort((a, b) => b - a).slice(0,3)
+        f_PMU_D=[...a, ...b]
+      }
+      else if(pmu_before3){
+        f_PMU_D=filter_PMU_D.sort().slice(0,3)
+      }
+      else if(pmu_behind3){
+        f_PMU_D=filter_PMU_D.sort((a, b) => b - a).slice(0,3)
+      }
+      var show_PMU_D=data_PMU_D.filter(el => {
+        return f_PMU_D.indexOf(Number(el[0]))!=-1
+      })
+    }
+
+    var arr=[...show_PE_M, ...show_PE_D,...show_DPS_M,...show_DPS_D,...show_PMU_M,...show_PMU_D]
+    draw(arr,img,stywh,stywd);
+  }
+  
+}
+
+var c=document.getElementById("myCanvas");
+var cxt=c.getContext("2d");
+function draw(datasource,img,stywh,stywd) {
+    var canvas = document.getElementById("myCanvas");
+    var ctx = canvas.getContext("2d");
+    ctx.globalAlpha=1;
+    // var img = document.getElementById("scream");
+    ctx.drawImage(img, 0, 0,2180,838);
+    ctx.beginPath();
+    ctx.globalAlpha=1;
+    // cxt.fillStyle = "#8bc34a";
+    // cxt.fillRect(100,80,20,20);
+    ctx.font="normal bold 12px sans-serif";
+    pos(ctx,datasource,stywh,stywd);
+    ctx.stroke();
+};
+
+// var max = Math.max.apply(null, (10,100));
+function pos(ctx,data,stywh,stywd){
+  if(stywd){
+    data.map((p)=>{
+      let c = getColorByNumber(p[0],100);
+      ctx.fillStyle=c;
+      ctx.fillText(p[0],p[1],p[2]+16);
+    })
+  }
+  if(stywh){
+    data.map((p)=>{
+      // if(p.length==4){
+      ctx.fillStyle="red";
+      ctx.fillText(p[3],p[1]+6,p[2]);
+      // }
+    })
+  }
+}
+
+function rgbaToHex(color) {
+	        var values = color
+	          .replace(/rgba?\(/, '')
+	          .replace(/\)/, '')
+	          .replace(/[\s+]/g, '')
+	          .split(',');
+	        var a = parseFloat(values[3] || 1),
+	          r = Math.floor(a * parseInt(values[0]) + (1 - a) * 255),
+	          g = Math.floor(a * parseInt(values[1]) + (1 - a) * 255),
+	          b = Math.floor(a * parseInt(values[2]) + (1 - a) * 255);
+
+	        return "#" +
+	          ("0" + r.toString(16)).slice(-2) +
+	          ("0" + g.toString(16)).slice(-2) +
+	          ("0" + b.toString(16)).slice(-2);
+	    }
+	    function getColorByNumber(n,max) {
+	    	let halfMax = max / 2  //最大数值的二分之一
+	        //var 百分之一 = (单色值范围) / halfMax;  单颜色的变化范围只在50%之内
+	        // 绿色的rgb(0,255,0) 红色的rgb(255,0,0) 红+绿 = 黄色 rgb(255,255,0);
+      		// [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]整数会直观一点。
+      		// 100为例，0为rgb(0,255,0)，1-49应该为rgb(0-254,255,0)， 50为100的一半rgb(255,255,0),51-99应该为rgb(255,0-255,0),100为rgb(255, 2, 0)，255/100不能整除，此处理想状态下应该是rgb(255, 0, 0)
+	        var one = 255 / halfMax; 
+	        var r = 0;
+	        var g = 0;
+	        var b = 0;
+
+
+	        if (n < halfMax) {
+	          // 比例小于halfMax的时候红色是越来越多的,直到红色为255时(红+绿)变为黄色.
+	          r = one * n;  
+	          g = 255;
+	        }
+
+	        if (n >= halfMax) {
+	          // 比例大于halfMax的时候绿色是越来越少的,直到0 变为纯红
+	          g = (255 - ((n - halfMax) * one)) < 0 ? 0 : (255 - ((n - halfMax) * one))
+	          r = 255;
+
+	        }
+	        r = parseInt(r);// 取整
+	        g = parseInt(g);// 取整
+	        b = parseInt(b);// 取整
+
+	        return rgbaToHex("rgb(" + r + "," + g + "," + b + ")");
+	    }
+</script>
+
+</body>
+</html>
